@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #21263a;
+    --border: #2e3347;
+    --text: #e8eaf0;
+    --text-muted: #8891a8;
+    --brand: #4f6ef7;
+    --brand-dark: #3d5ce6;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+  }
+
+  body {
+    @apply bg-[#0f1117] text-[#e8eaf0] font-sans antialiased;
+  }
+
+  * {
+    @apply border-[#2e3347];
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-[#2e3347] rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-[#3e4560]; }
+}
+
+@layer components {
+  .card {
+    @apply bg-[#1a1d27] border border-[#2e3347] rounded-xl;
+  }
+  .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-600 text-white font-medium px-4 py-2 rounded-lg
+           transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-[#21263a] hover:bg-[#2a2f47] text-[#e8eaf0] border border-[#2e3347]
+           font-medium px-4 py-2 rounded-lg transition-colors duration-150;
+  }
+  .btn-ghost {
+    @apply text-[#8891a8] hover:text-[#e8eaf0] hover:bg-[#21263a]
+           font-medium px-3 py-2 rounded-lg transition-colors duration-150;
+  }
+  .input {
+    @apply w-full bg-[#21263a] border border-[#2e3347] rounded-lg px-3 py-2
+           text-[#e8eaf0] placeholder-[#8891a8] focus:outline-none focus:border-brand-500
+           focus:ring-1 focus:ring-brand-500 transition-colors;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+}

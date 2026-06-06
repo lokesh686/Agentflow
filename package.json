@@ -1,0 +1,21 @@
+{
+  "name": "agentflow-pro",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=apps/api-gateway\" \"npm run dev --workspace=apps/frontend\"",
+    "dev:api": "npm run dev --workspace=apps/api-gateway",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:orchestrator": "cd services/orchestrator && uvicorn main:app --reload --port 8001",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
