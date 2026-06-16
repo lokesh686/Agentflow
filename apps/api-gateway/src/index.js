@@ -49,6 +49,12 @@ io.on('connection', (socket) => {
   socket.on('leave:execution', (executionId) => {
     socket.leave(`execution:${executionId}`);
   });
+  socket.on('join:team', (teamId) => {
+    socket.join(`team:${teamId}`);
+  });
+  socket.on('leave:team', (teamId) => {
+    socket.leave(`team:${teamId}`);
+  });
 });
 
 const PORT = process.env.PORT || 3000;
@@ -62,4 +68,8 @@ async function start() {
   });
 }
 
-start();
+if (require.main === module) {
+  start();
+}
+
+module.exports = app;
