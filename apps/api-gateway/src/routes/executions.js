@@ -2,6 +2,36 @@ const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
+// POST /v1/executions/internal/dlq-alert
+router.post('/internal/dlq-alert', async (req, res, next) => {
+  try {
+    const token = process.env.INTERNAL_API_TOKEN;
+    if (token && req.headers['x-internal-token'] !== token) {
+      return res.status(401).json({ success: false, error: 'Unauthorized internal alert' });
+    }
+
+    const { executionId, reason, attempts } = req.body || {};
+    if (!executionId || !reason) {
+      return res.status(400).json({ success: false, error: 'executionId and reason are required' });
+    }
+
+    const Execution = require('../models/Execution');
+    const execution = await Execution.findById(executionId);
+    if (!execution) {
+      return res.status(404).json({ success: false, error: 'Execution not found' });
+    }
+
+    if (execution.status === 'QUEUED' || execution.status === 'RUNNING') {
+      execution.status = 'FAILED';
+      execution.error = `Moved to dead-letter queue after ${attempts || 3} attempts: ${reason}`;
+      execution.completedAt = new Date();
+      await execution.save();
+    }
+
+    res.status(202).json({ success: true });
+  } catch (err) { next(err); }
+});
+
 // GET /v1/executions — list team executions
 router.get('/', requireAuth, async (req, res, next) => {
   try {

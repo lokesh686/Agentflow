@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     mongodb_uri: str = "mongodb://localhost:27017/agentflow_dev"
     redis_url: str = "redis://localhost:6379"
+    api_gateway_url: str = "http://localhost:3000"
+    internal_api_token: str = ""
 
     port: int = 8001
     max_agent_steps: int = 25

@@ -133,17 +133,16 @@ router.post('/:id/execute', requireAuth, requireRole('member'), async (req, res,
       return res.status(400).json({ success: false, error: 'Workflow graph is invalid', details: errors });
     }
     const Execution = require('../models/Execution');
-    const { getRedis } = require('../config/redis');
+    const { addJob } = require('../queues/executionQueue');
     const execution = await Execution.create({
       workflowId: workflow._id, teamId: req.user.teamId, triggeredBy: req.user.sub,
       workflowVersion: workflow.version, input: req.body.input || {}, status: 'QUEUED',
     });
     try {
-      const redis = getRedis();
-      await redis.lPush('execution:queue', JSON.stringify({
+      await addJob({
         executionId: execution._id.toString(), workflowId: workflow._id.toString(),
         teamId: req.user.teamId, graph: workflow.graph, input: execution.input,
-      }));
+      });
     } catch (redisErr) {
       execution.status = 'FAILED';
       execution.error = 'Failed to queue: ' + redisErr.message;

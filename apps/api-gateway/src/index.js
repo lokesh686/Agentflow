@@ -3,8 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const connectDB = require('./config/db');
-const connectRedis = require('./config/redis');
+const { validateEnv } = require('./config/validateEnv');
+const { connectDB, getMongoStatus } = require('./config/db');
+const { connectRedis, getRedisStatus } = require('./config/redis');
 const authRoutes = require('./routes/auth');
 const oauthRoutes = require('./routes/oauth');
 const workflowRoutes = require('./routes/workflows');
@@ -16,6 +17,7 @@ const { startPubSubBridge } = require('./pubsub/bridge');
 
 const app = express();
 const server = http.createServer(app);
+const startedAtMs = Date.now();
 
 // Socket.io for real-time execution streaming
 const io = new Server(server, {
@@ -36,7 +38,25 @@ app.use('/v1/executions', executionRoutes);
 app.use('/v1/billing', billingRoutes);
 
 // Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+app.get('/health', async (req, res) => {
+  const mongo = getMongoStatus();
+  const redis = await getRedisStatus();
+  let orchestrator = 'error';
+  try {
+    const healthUrl = `${process.env.ORCHESTRATOR_URL.replace(/\/$/, '')}/health`;
+    const response = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) });
+    orchestrator = response.ok ? 'ok' : 'error';
+  } catch (err) {
+    orchestrator = 'error';
+  }
+
+  res.json({
+    mongo,
+    redis,
+    orchestrator,
+    uptime_seconds: Math.floor((Date.now() - startedAtMs) / 1000),
+  });
+});
 
 // Error handler (must be last)
 app.use(errorHandler);
@@ -60,6 +80,7 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 
 async function start() {
+  validateEnv();
   await connectDB();
   await connectRedis();
   await startPubSubBridge(io);

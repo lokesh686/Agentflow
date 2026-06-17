@@ -1,11 +1,15 @@
 """Internal API routes for the orchestrator service."""
 
-import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from db import get_db
-from redis_client import get_redis, EXECUTION_QUEUE
+from worker.execution_worker import QUEUE_NAME, REDIS_URL, get_queue_metrics
+
+try:
+    from bullmq import Queue  # type: ignore
+except Exception:  # pragma: no cover
+    Queue = None
 
 router = APIRouter(tags=["orchestrator"])
 
@@ -24,7 +28,10 @@ async def trigger_execution(body: TriggerRequest):
     Directly enqueue an execution job (called by API gateway or tests).
     The queue worker picks this up and runs the LangGraph workflow.
     """
-    redis = await get_redis()
+    if Queue is None:
+        raise HTTPException(status_code=503, detail="Queue unavailable")
+
+    queue = Queue(QUEUE_NAME, {"connection": REDIS_URL})
     job = {
         "executionId": body.execution_id,
         "workflowId": body.workflow_id,
@@ -32,7 +39,11 @@ async def trigger_execution(body: TriggerRequest):
         "graph": body.graph,
         "input": body.input,
     }
-    await redis.lPush(EXECUTION_QUEUE, json.dumps(job))
+    await queue.add(
+        "execute",
+        job,
+        {"jobId": body.execution_id, "removeOnComplete": 100, "removeOnFail": 500},
+    )
     return {"queued": True, "executionId": body.execution_id}
 
 
@@ -53,6 +64,5 @@ async def get_execution_status(execution_id: str):
 @router.get("/queue/length")
 async def queue_length():
     """Return current execution queue depth."""
-    redis = await get_redis()
-    length = await redis.lLen(EXECUTION_QUEUE)
-    return {"queue": EXECUTION_QUEUE, "length": length}
+    metrics = await get_queue_metrics()
+    return {"queue": QUEUE_NAME, "length": metrics["queue_depth"]}

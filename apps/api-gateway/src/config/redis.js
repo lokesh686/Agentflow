@@ -15,4 +15,14 @@ function getRedis() {
   return client;
 }
 
-module.exports = { connectRedis, getRedis };
+async function getRedisStatus() {
+  if (!client) return 'error';
+  try {
+    await client.ping();
+    return 'ok';
+  } catch (err) {
+    return 'error';
+  }
+}
+
+module.exports = { connectRedis, getRedis, getRedisStatus };

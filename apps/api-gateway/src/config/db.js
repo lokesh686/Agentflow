@@ -10,4 +10,8 @@ async function connectDB() {
   }
 }
 
-module.exports = connectDB;
+function getMongoStatus() {
+  return mongoose.connection.readyState === 1 ? 'ok' : 'error';
+}
+
+module.exports = { connectDB, getMongoStatus };
