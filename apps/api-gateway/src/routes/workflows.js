@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const workflowService = require('../services/workflowService');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { verifyWebhookSignature } = require('../middleware/webhookAuth');
 
 const router = express.Router();
 
@@ -151,6 +152,53 @@ router.post('/:id/execute', requireAuth, requireRole('member'), async (req, res,
     }
     res.status(202).json({ success: true, data: { executionId: execution._id, status: 'QUEUED' } });
   } catch (err) { next(err); }
+});
+
+// POST /v1/workflows/webhooks/:id/:secret — public webhook trigger
+router.post('/webhooks/:id/:secret', verifyWebhookSignature, async (req, res, next) => {
+  try {
+    const workflow = req.workflow;
+    const errors = workflow.validateGraph();
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, error: 'Workflow graph is invalid', details: errors });
+    }
+
+    const Execution = require('../models/Execution');
+    const { getRedis } = require('../config/redis');
+
+    const execution = await Execution.create({
+      workflowId: workflow._id,
+      teamId: workflow.teamId,
+      triggeredBy: workflow.createdBy, // Fallback to workflow creator
+      workflowVersion: workflow.version,
+      input: req.body,
+      callbackUrl: req.body._callback_url || null,
+      status: 'QUEUED',
+    });
+
+    try {
+      const redis = getRedis();
+      await redis.lPush('execution:queue', JSON.stringify({
+        executionId: execution._id.toString(),
+        workflowId: workflow._id.toString(),
+        teamId: workflow.teamId.toString(),
+        graph: workflow.graph,
+        input: execution.input,
+      }));
+    } catch (redisErr) {
+      execution.status = 'FAILED';
+      execution.error = 'Failed to queue: ' + redisErr.message;
+      await execution.save();
+      return res.status(503).json({ success: false, error: 'Execution queue unavailable' });
+    }
+
+    res.status(202).json({
+      success: true,
+      data: { executionId: execution._id, status: 'QUEUED' }
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

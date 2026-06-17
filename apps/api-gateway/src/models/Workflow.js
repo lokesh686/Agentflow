@@ -110,6 +110,9 @@ const workflowSchema = new mongoose.Schema(
 
     // Soft delete
     deletedAt: { type: Date, default: null },
+
+    // Webhook configuration
+    webhookSecret: { type: String, default: null },
   },
   { timestamps: true }
 );

@@ -92,6 +92,8 @@ const executionSchema = new mongoose.Schema(
 
     finalOutput: { type: String, default: null },
 
+    callbackUrl: { type: String, default: null },
+
     totalTokens: {
       prompt:     { type: Number, default: 0 },
       completion: { type: Number, default: 0 },

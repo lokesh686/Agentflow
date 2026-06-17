@@ -12,6 +12,7 @@
  */
 
 const { createClient } = require('redis');
+const Execution = require('../models/Execution');
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -34,7 +35,7 @@ async function startPubSubBridge(io) {
   console.log('[PubSub Bridge] Connected to Redis, subscribing to patterns...');
 
   // Subscribe to execution and team event patterns
-  await subscriber.pSubscribe(PATTERNS, (message, channel) => {
+  await subscriber.pSubscribe(PATTERNS, async (message, channel) => {
     try {
       const event = JSON.parse(message);
       const executionId = event.execution_id;
@@ -76,6 +77,8 @@ async function startPubSubBridge(io) {
             estimatedCostUsd: event.payload.estimatedCostUsd,
             timestamp: event.timestamp,
           });
+          // Handle bidirectional callback if exists
+          await handleExecutionCallback(executionId, 'completed', event.payload.finalOutput);
           break;
 
         case 'error':
@@ -84,6 +87,8 @@ async function startPubSubBridge(io) {
             error: event.payload.error,
             timestamp: event.timestamp,
           });
+          // Handle bidirectional callback for errors
+          await handleExecutionCallback(executionId, 'failed', null, event.payload.error);
           break;
 
         case 'approval_required':
@@ -103,6 +108,36 @@ async function startPubSubBridge(io) {
 
   console.log(`[PubSub Bridge] Subscribed to patterns: ${PATTERNS.join(', ')}`);
   return subscriber;
+}
+
+/**
+ * Handle outbound callback for bidirectional integration.
+ */
+async function handleExecutionCallback(executionId, status, output, error = null) {
+  try {
+    const execution = await Execution.findById(executionId);
+    if (execution && execution.callbackUrl) {
+      console.log(`[Callback] Dispatching to ${execution.callbackUrl} for execution ${executionId}`);
+      
+      const body = {
+        executionId,
+        status,
+        output,
+        token_usage: execution.totalTokens,
+        cost: execution.estimatedCostUsd
+      };
+      
+      if (error) body.error = error;
+
+      await fetch(execution.callbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
+  } catch (err) {
+    console.error(`[Callback] Failed to dispatch for execution ${executionId}:`, err.message);
+  }
 }
 
 /**
