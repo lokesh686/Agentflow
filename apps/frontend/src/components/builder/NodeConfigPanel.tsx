@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 
+import PromptEditor from '../PromptEditor/PromptEditor'
+
 const MODELS = ['gpt-4o', 'gpt-4o-mini', 'gemini-1.5-pro', 'claude-sonnet-4-6']
 const TOOLS  = ['web_search', 'url_scraper', 'code_executor', 'data_analyzer', 'get_current_datetime']
 
@@ -9,6 +11,11 @@ interface NodeConfig {
   label: string
   config: {
     systemPrompt?: string
+    abTestConfig?: {
+      variantA: number;
+      variantB: number;
+      splitPercent: number;
+    }
     model?: string
     temperature?: number
     tools?: string[]
@@ -107,14 +114,14 @@ export default function NodeConfigPanel({ node, onChange, onDelete, onClose }: P
           </div>
         </div>
 
-        {/* System Prompt */}
-        <div>
-          <label className="block text-xs font-medium text-[#8891a8] mb-1.5">System Prompt</label>
-          <textarea
-            className="input text-sm resize-none h-28 font-mono text-xs"
-            placeholder="Describe what this agent should do…"
-            value={local.config.systemPrompt ?? ''}
-            onChange={(e) => update('systemPrompt', e.target.value)}
+        {/* System Prompt & A/B Testing Editor */}
+        <div className="-mx-2">
+          <PromptEditor
+            nodeId={local.id}
+            initialContent={local.config.systemPrompt ?? ''}
+            onChange={(newContent) => update('systemPrompt', newContent)}
+            abTestConfig={local.config.abTestConfig}
+            onAbTestChange={(newConfig) => update('abTestConfig', newConfig)}
           />
         </div>
 

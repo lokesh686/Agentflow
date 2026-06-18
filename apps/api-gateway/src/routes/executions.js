@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { auditLogger } = require('../middleware/auditLogger');
 const router = express.Router();
 
 // POST /v1/executions/internal/dlq-alert
@@ -58,7 +59,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 });
 
 // POST /v1/executions/:id/cancel
-router.post('/:id/cancel', requireAuth, requireRole('member'), async (req, res, next) => {
+router.post('/:id/cancel', requireAuth, requireRole('member'), auditLogger('Execution'), async (req, res, next) => {
   try {
     const Execution = require('../models/Execution');
     const execution = await Execution.findOne({ _id: req.params.id, teamId: req.user.teamId });

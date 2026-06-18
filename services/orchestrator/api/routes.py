@@ -14,6 +14,24 @@ except Exception:  # pragma: no cover
 router = APIRouter(tags=["orchestrator"])
 
 
+class EvalTriggerRequest(BaseModel):
+    evalRunId: str
+
+@router.post("/evals/trigger")
+async def trigger_eval_run(body: EvalTriggerRequest):
+    """
+    Triggers an evaluation run. In a real system this should be queued.
+    For now, we dispatch it as a background task.
+    """
+    from fastapi import BackgroundTasks
+    from ..evals.runner import run_evaluation
+    
+    # We ideally want to use BackgroundTasks to not block the request
+    # However, since this router doesn't currently inject BackgroundTasks, 
+    # we can use asyncio.create_task for a fire-and-forget.
+    import asyncio
+    asyncio.create_task(run_evaluation(body.evalRunId))
+    return {"queued": True, "evalRunId": body.evalRunId}
 class TriggerRequest(BaseModel):
     execution_id: str
     workflow_id: str

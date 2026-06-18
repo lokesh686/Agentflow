@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentflow-sdk"
+version = "1.0.0"
+description = "Official Python SDK for AgentFlow Pro"
+requires-python = ">=3.8"
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentflow_sdk"]

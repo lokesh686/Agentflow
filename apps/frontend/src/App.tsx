@@ -10,6 +10,7 @@ import WorkflowBuilderPage from './pages/workflows/builder/WorkflowBuilderPage';
 import ExecutionsPage from './pages/executions/ExecutionsPage';
 import ExecutionDetailPage from './pages/executions/ExecutionDetailPage';
 import BillingPage from './pages/billing/BillingPage';
+import EvalsPage from './pages/evals/EvalsPage';
 import DashboardPage from './pages/DashboardPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="executions" element={<ExecutionsPage />} />
             <Route path="executions/:id" element={<ExecutionDetailPage />} />
+            <Route path="evals" element={<EvalsPage />} />
             <Route path="billing" element={<BillingPage />} />
             <Route path="monitor" element={<MonitorPage />} />
           </Route>

@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { auditLogger } = require('../middleware/auditLogger');
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../utils/email');
 const User = require('../models/User');
@@ -8,7 +9,7 @@ const Team = require('../models/Team');
 const router = express.Router();
 
 // Invite user to team (Admins and Owners only)
-router.post('/invite', requireAuth, requireRole('admin'), async (req, res, next) => {
+router.post('/invite', requireAuth, requireRole('admin'), auditLogger('Team'), async (req, res, next) => {
   try {
     const { email, role } = req.body;
     if (!email || !role) {
@@ -46,7 +47,7 @@ router.post('/invite', requireAuth, requireRole('admin'), async (req, res, next)
 });
 
 // Accept team invite
-router.post('/join', requireAuth, async (req, res, next) => {
+router.post('/join', requireAuth, auditLogger('Team'), async (req, res, next) => {
   try {
     const { token } = req.body;
     if (!token) return res.status(400).json({ success: false, error: 'Token required' });

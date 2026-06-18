@@ -1,0 +1,40 @@
+name: CD Deployment
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /opt/agentflow-pro
+            git pull origin main
+            
+            # Pull latest images from registry
+            docker-compose -f docker-compose.prod.yml pull
+            
+            # Start services (recreates if image changed)
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # Smoke test health endpoints
+            sleep 10
+            curl -f http://localhost:3000/health || (echo "API Gateway failed to start" && exit 1)
+
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: "AgentFlow Pro Deployed"
+          SLACK_MESSAGE: "Version ${{ github.ref_name }} has been deployed successfully to production."
+          SLACK_COLOR: "good"

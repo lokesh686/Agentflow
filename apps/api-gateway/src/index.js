@@ -17,6 +17,9 @@ const internalRoutes = require('./routes/internal');
 const analyticsRoutes = require('./routes/analytics');
 const teamRoutes = require('./routes/teams');
 const templateRoutes = require('./routes/templates');
+const auditRoutes = require('./routes/audit');
+const promptRoutes = require('./routes/prompts');
+const evalRoutes = require('./routes/evals');
 const { rateLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 const helmet = require('helmet');
@@ -51,6 +54,10 @@ app.use('/v1/internal', internalRoutes);
 app.use('/v1/analytics', analyticsRoutes);
 app.use('/v1/teams', teamRoutes);
 app.use('/v1/templates', templateRoutes);
+app.use('/v1/prompts', promptRoutes);
+app.use('/v1/evals', evalRoutes);
+app.use('/v1/audit-logs', auditRoutes);
+app.use('/v1/gdpr', auditRoutes); // Using same router for gdpr
 
 // Health check
 app.get('/health', async (req, res) => {

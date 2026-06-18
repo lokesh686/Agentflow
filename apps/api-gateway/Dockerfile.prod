@@ -1,0 +1,25 @@
+# ---- Build Stage ----
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+# Using legacy-peer-deps to avoid issues seen in dev environment
+RUN npm ci --legacy-peer-deps
+COPY src ./src
+# Build step if we had typescript (currently just source files)
+
+# ---- Run Stage ----
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production --legacy-peer-deps
+COPY --from=builder /app/src ./src
+
+# Set production environment
+ENV NODE_ENV=production
+EXPOSE 3000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+CMD ["node", "src/index.js"]

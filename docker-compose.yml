@@ -16,7 +16,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "8002:8001"
     environment:
       MONGODB_URI: mongodb://mongo:27017/agentflow_dev
       REDIS_URL: redis://redis:6379

@@ -1,8 +1,8 @@
 const express = require('express');
 const Joi = require('joi');
-const workflowService = require('../services/workflowService');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { checkPlanLimits } = require('../middleware/planLimits');
+const { auditLogger } = require('../middleware/auditLogger');
 const { verifyWebhookSignature } = require('../middleware/webhookAuth');
 
 const router = express.Router();
@@ -65,7 +65,7 @@ function validate(schema) {
 }
 
 // POST /v1/workflows — create
-router.post('/', requireAuth, requireRole('member'), validate(createSchema), async (req, res, next) => {
+router.post('/', requireAuth, requireRole('member'), auditLogger('Workflow'), validate(createSchema), async (req, res, next) => {
   try {
     const workflow = await workflowService.createWorkflow({
       teamId: req.user.teamId, userId: req.user.sub, ...req.body,
@@ -95,7 +95,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 });
 
 // PUT /v1/workflows/:id — update
-router.put('/:id', requireAuth, requireRole('member'), validate(updateSchema), async (req, res, next) => {
+router.put('/:id', requireAuth, requireRole('member'), auditLogger('Workflow'), validate(updateSchema), async (req, res, next) => {
   try {
     const workflow = await workflowService.updateWorkflow({
       workflowId: req.params.id, teamId: req.user.teamId, userId: req.user.sub, updates: req.body,
@@ -105,7 +105,7 @@ router.put('/:id', requireAuth, requireRole('member'), validate(updateSchema), a
 });
 
 // DELETE /v1/workflows/:id — soft delete (admin+)
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res, next) => {
+router.delete('/:id', requireAuth, requireRole('admin'), auditLogger('Workflow'), async (req, res, next) => {
   try {
     const result = await workflowService.deleteWorkflow({ workflowId: req.params.id, teamId: req.user.teamId });
     res.json({ success: true, data: result });

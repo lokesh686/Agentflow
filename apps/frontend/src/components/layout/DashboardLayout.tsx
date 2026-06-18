@@ -6,6 +6,7 @@ const NAV = [
   { to: '/workflows', label: 'Workflows', icon: '◈' },
   { to: '/templates', label: 'Templates', icon: '📚' },
   { to: '/executions', label: 'Executions', icon: '▷' },
+  { to: '/evals', label: 'Evaluations', icon: '🧪' },
   { to: '/monitor', label: 'Monitor', icon: '📈' },
   { to: '/billing', label: 'Billing', icon: '💳' },
   { to: '/team', label: 'Team & API', icon: '⚙' },

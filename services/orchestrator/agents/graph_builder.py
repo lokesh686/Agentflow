@@ -14,11 +14,14 @@ Graph state shape:
 }
 """
 
+import random
 from typing import Any, TypedDict
 from langgraph.graph import StateGraph, END
 
 from .agent_node import AgentNode
+from .supervisor_node import SupervisorNode
 from ..events import publish_status
+from ..db import get_db
 
 
 class GraphState(TypedDict):
@@ -29,7 +32,7 @@ class GraphState(TypedDict):
     retry_count: int
 
 
-def build_graph(
+async def build_graph(
     workflow_graph: dict[str, Any],
     execution_id: str,
     team_id: str,
@@ -56,16 +59,46 @@ def build_graph(
 
     # ── Register agent nodes ─────────────────────────────────────────────────
     node_map: dict[str, AgentNode] = {}
+    db = await get_db()
     for node_def in nodes:
-        agent = AgentNode(
-            node_id=node_def["id"],
-            node_type=node_def.get("type", "custom"),
-            label=node_def.get("label", node_def["id"]),
-            config=node_def.get("config", {}),
-            execution_id=execution_id,
-            team_id=team_id,
-            workflow_id=workflow_id,
-        )
+        config = node_def.get("config", {})
+        ab_test = config.get("abTestConfig")
+        if ab_test and ab_test.get("variantA") and ab_test.get("variantB"):
+            # Execute A/B test routing logic
+            roll = random.random() * 100
+            split = ab_test.get("splitPercent", 50)
+            chosen_version = ab_test["variantA"] if roll <= split else ab_test["variantB"]
+            
+            # Fetch the prompt version
+            prompt_doc = await db.promptversions.find_one({
+                "workflowId": workflow_id,
+                "nodeId": node_def["id"],
+                "version": chosen_version
+            })
+            if prompt_doc:
+                config["systemPrompt"] = prompt_doc.get("content", config.get("systemPrompt", ""))
+
+        node_type = node_def.get("type", "custom")
+        if node_type == "supervisor":
+            agent = SupervisorNode(
+                node_id=node_def["id"],
+                label=node_def.get("label", node_def["id"]),
+                config=config,
+                execution_id=execution_id,
+                team_id=team_id,
+                workflow_id=workflow_id,
+            )
+        else:
+            agent = AgentNode(
+                node_id=node_def["id"],
+                node_type=node_type,
+                label=node_def.get("label", node_def["id"]),
+                config=config,
+                execution_id=execution_id,
+                team_id=team_id,
+                workflow_id=workflow_id,
+            )
+        
         node_map[node_def["id"]] = agent
         builder.add_node(node_def["id"], agent)
 
@@ -147,7 +180,7 @@ async def run_workflow(
     from config import get_settings
     settings = get_settings()
 
-    graph = build_graph(workflow_graph, execution_id, team_id, workflow_id)
+    graph = await build_graph(workflow_graph, execution_id, team_id, workflow_id)
 
     initial_state: GraphState = {
         "task_input": task_input,
