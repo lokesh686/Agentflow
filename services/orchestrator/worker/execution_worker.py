@@ -72,6 +72,39 @@ async def process(job: Any, _token: Any = None) -> None:
 
         await publish_done(execution_id, team_id, final_output, estimated_cost)
 
+        # n8n / Zapier integration callback
+        if exec_doc and exec_doc.get("callbackUrl"):
+            payload = {
+                "executionId": execution_id,
+                "workflowId": job.data.get("workflowId"),
+                "status": "COMPLETED",
+                "finalOutput": final_output,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    await client.post(exec_doc["callbackUrl"], json=payload)
+            except httpx.RequestError as exc:
+                logger.error(
+                    "Failed to send callback for execution %s to %s: %s",
+                    execution_id,
+                    exec_doc["callbackUrl"],
+                    exc,
+                )
+        
+        # Record usage
+        try:
+            url = f"{settings.api_gateway_url.rstrip('/')}/v1/internal/record-usage"
+            headers = {"x-internal-token": settings.internal_api_token}
+            payload = {"teamId": team_id, "tokensUsed": total_tokens}
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(url, json=payload, headers=headers)
+        except httpx.RequestError as exc:
+            logger.error(
+                "Failed to record usage for execution %s: %s",
+                execution_id,
+                exc,
+            )
+
         await db.workflows.update_one(
             {"_id": job.data.get("workflowId")},
             {

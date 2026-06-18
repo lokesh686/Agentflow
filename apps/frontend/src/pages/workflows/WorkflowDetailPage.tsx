@@ -54,6 +54,8 @@ export default function WorkflowDetailPage() {
           <div className="flex gap-2">
             <button onClick={() => navigate(`/workflows/${current._id}/builder`)}
               className="btn-secondary text-sm">◈ Builder</button>
+            <button onClick={() => navigate(`/workflows/${current._id}/webhook`)}
+              className="btn-secondary text-sm">🔗 Webhook</button>
             <select
               value={current.status}
               onChange={(e) => handleStatusChange(e.target.value)}

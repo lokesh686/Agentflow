@@ -1,10 +1,10 @@
 import { useAuthStore } from '../store/authStore';
 import { api } from '../lib/api';
 
-export default function ApprovalStep({ execution }) {
+export default function ApprovalStep({ execution }: { execution: any }) {
   const { accessToken } = useAuthStore();
 
-  const handleDecision = async (decision) => {
+  const handleDecision = async (decision: string) => {
     try {
       await api.post(`/approvals/${execution._id}/${decision}`, null, {
         headers: { Authorization: `Bearer ${accessToken}` },

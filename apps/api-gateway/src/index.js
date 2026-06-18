@@ -12,6 +12,11 @@ const workflowRoutes = require('./routes/workflows');
 const executionRoutes = require('./routes/executions');
 const billingRoutes = require('./routes/billing');
 const approvalRoutes = require('./routes/approvals');
+const webhookRoutes = require('./routes/webhooks');
+const internalRoutes = require('./routes/internal');
+const analyticsRoutes = require('./routes/analytics');
+const teamRoutes = require('./routes/teams');
+const templateRoutes = require('./routes/templates');
 const { rateLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 const helmet = require('helmet');
@@ -41,6 +46,11 @@ app.use('/v1/workflows', workflowRoutes);
 app.use('/v1/executions', executionRoutes);
 app.use('/v1/billing', billingRoutes);
 app.use('/v1/approvals', approvalRoutes);
+app.use('/v1/webhooks', webhookRoutes);
+app.use('/v1/internal', internalRoutes);
+app.use('/v1/analytics', analyticsRoutes);
+app.use('/v1/teams', teamRoutes);
+app.use('/v1/templates', templateRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {

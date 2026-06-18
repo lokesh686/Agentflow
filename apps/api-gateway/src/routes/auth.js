@@ -3,6 +3,9 @@ const Joi = require('joi');
 const authService = require('../services/authService');
 const { requireAuth } = require('../middleware/auth');
 const { authLimiter, loginLimiter } = require('../middleware/rateLimiter');
+const ApiKey = require('../models/ApiKey');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 
 const router = express.Router();
 
@@ -164,6 +167,48 @@ router.get('/me', requireAuth, async (req, res, next) => {
     const user = await User.findById(req.user.sub);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     res.json({ success: true, data: { user: user.toPublic() } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/apikeys', requireAuth, async (req, res, next) => {
+  try {
+    const keys = await ApiKey.find({ teamId: req.user.teamId }).select('-keyHash').sort('-createdAt');
+    res.json({ success: true, keys });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/apikeys', requireAuth, async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'Name required' });
+
+    const rawKey = 'af_' + crypto.randomBytes(24).toString('base64url').replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
+    const keyHash = await bcrypt.hash(rawKey, 10);
+    const keyPrefix = rawKey.substring(0, 11);
+
+    const apiKey = await ApiKey.create({
+      userId: req.user.sub,
+      teamId: req.user.teamId,
+      name,
+      keyHash,
+      keyPrefix
+    });
+
+    res.json({ success: true, key: rawKey, apiKey: { _id: apiKey._id, name: apiKey.name, keyPrefix } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/apikeys/:id', requireAuth, async (req, res, next) => {
+  try {
+    const apiKey = await ApiKey.findOneAndDelete({ _id: req.params.id, teamId: req.user.teamId });
+    if (!apiKey) return res.status(404).json({ success: false, error: 'Key not found' });
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

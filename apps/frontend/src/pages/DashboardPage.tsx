@@ -36,6 +36,8 @@ function LiveEventRow({ event }: { event: LiveEvent }) {
   )
 }
 
+import UsageWidget from '../components/UsageWidget';
+
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { workflows, fetch: fetchWorkflows } = useWorkflowStore()
@@ -87,11 +89,8 @@ export default function DashboardPage() {
         <MetricCard label="Total Cost" value={`$${totalCost.toFixed(4)}`} sub={`${totalTokens.toLocaleString()} tokens`} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <MetricCard label="Total Executions" value={executions.length} />
-        <MetricCard label="Paused / Awaiting" value={paused} accent={paused > 0 ? 'text-orange-400' : undefined} />
-        <MetricCard label="Cancelled" value={executions.filter((e) => e.status === 'CANCELLED').length} />
-        <MetricCard label="Workflows" value={workflows.length} sub={`${activeWf} active`} />
+      <div className="mb-8">
+        <UsageWidget />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -145,7 +144,7 @@ export default function DashboardPage() {
           { to: '/workflows', icon: '◈', label: 'Workflows', sub: `${workflows.length} total` },
           { to: '/executions', icon: '▷', label: 'Executions', sub: `${running} running` },
           { to: '/billing', icon: '💳', label: 'Billing', sub: 'Manage plan' },
-          { to: '/workflows', icon: '+', label: 'New Workflow', sub: 'Get started' },
+          { to: '/templates', icon: '📚', label: 'Templates', sub: 'Browse library' },
         ].map(({ to, icon, label, sub }) => (
           <Link key={label} to={to} className="card p-4 hover:border-brand-500/40 transition-colors group flex items-center gap-3">
             <div className="text-xl text-[#8891a8] group-hover:text-brand-500 transition-colors">{icon}</div>

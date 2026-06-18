@@ -61,8 +61,8 @@ async def get_execution_status(execution_id: str):
     return doc
 
 
-@router.get("/queue/length")
-async def queue_length():
-    """Return current execution queue depth."""
+@router.get("/queue/metrics")
+async def queue_metrics():
+    """Return current execution queue metrics."""
     metrics = await get_queue_metrics()
-    return {"queue": QUEUE_NAME, "length": metrics["queue_depth"]}
+    return metrics

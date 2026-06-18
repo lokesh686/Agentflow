@@ -1,175 +1,61 @@
-# Bidirectional n8n Integration
+# AgentFlow Pro + n8n Integration Guide
 
-This document describes how to integrate AgentFlow with n8n using bidirectional webhooks and HMAC security.
+This guide provides everything you need to trigger AgentFlow Pro workflows from n8n and get the results back.
 
-## Overview
+## 1. Triggering an AgentFlow Workflow
 
-The integration allows n8n to:
-1.  **Trigger AgentFlow Workflows**: Start a workflow execution via a secure HMAC-signed webhook.
-2.  **Receive Results Automatically**: AgentFlow will POST the final output back to an n8n webhook once execution is complete.
+You can trigger any AgentFlow workflow using its unique webhook URL.
 
----
+### Steps:
 
-## 1. Trigger AgentFlow from n8n
+1.  **Get the Webhook URL in AgentFlow:**
+    *   Navigate to the workflow you want to trigger.
+    *   Click on the "Webhook" button in the header.
+    *   Copy the full **Webhook URL**. It will look like this: `https://yourapp.com/v1/webhooks/{workflowId}/{secret}`
 
-To trigger a workflow, send a POST request to the AgentFlow API.
+2.  **Configure the HTTP Request Node in n8n:**
+    *   Add an `HTTP Request` node to your n8n workflow.
+    *   **Method:** `POST`
+    *   **URL:** Paste the Webhook URL from AgentFlow.
+    *   **Body Content Type:** `JSON`
+    *   **Body:** This is where you provide the input for your workflow. It must be a JSON object. To pass data from previous n8n nodes, use expressions. For example:
+        ```json
+        {
+            "task": "Summarize the following article for me.",
+            "article_url": "{{ $json.articleUrl }}",
+            "_callback_url": "{{ $n8n.webhookUrl }}"
+        }
+        ```
 
-### Endpoint
-`POST https://yourapp.com/v1/workflows/webhooks/{workflowId}/{secret}`
+### Important: Using the Callback URL
 
-- `{workflowId}`: The ID of your AgentFlow workflow.
-- `{secret}`: A secret key used for HMAC signing (can be configured per workflow).
+To get the results of your AgentFlow execution back into n8n, you **must** include the `_callback_url` field in your JSON body.
 
-### Authentication (HMAC)
-Every request must include an `x-agentflow-signature` header. This signature is a SHA-256 HMAC of the request body, using your `webhookSecret` as the key.
+*   **Field Name:** `_callback_url`
+*   **Value:** Use the n8n expression `{{ $n8n.webhookUrl }}`. This special expression tells n8n to generate a unique, temporary webhook URL for this specific run.
 
-**Format**: `sha256={hash}`
+AgentFlow will automatically POST the final result to this URL when the execution is complete.
 
-### n8n Node Configuration
+## 2. Receiving the Result in n8n
 
-**Node**: `HTTP Request`
-- **Method**: `POST`
-- **URL**: `https://yourapp.com/v1/workflows/webhooks/{workflowId}/{secret}`
-- **Headers**:
-    - `x-agentflow-signature`: `{{$node.Sign.json.signature}}` (Assuming a previous node calculates the signature)
-- **Body**: `{{$json}}` (Pass your trigger data as the workflow input)
+To receive the result, you need a `Webhook` trigger node in a *separate* n8n workflow.
 
-**Adding Callback URL**:
-To receive results back, include `_callback_url` in your request body:
-```json
-{
-  "task": "Research AI trends",
-  "_callback_url": "https://your-n8n.com/webhook/agentflow-callback"
-}
-```
-
----
-
-## 2. Receive Results in n8n
-
-AgentFlow will automatically send a POST request to your `_callback_url` when the workflow finishes.
-
-### n8n Node Configuration
-
-**Node**: `Webhook`
-- **HTTP Method**: `POST`
-- **Path**: `/webhook/agentflow-callback`
-
-### Callback Payload
-```json
-{
-  "executionId": "648f...",
-  "status": "completed",
-  "output": "The research results...",
-  "token_usage": {
-    "prompt": 1200,
-    "completion": 800,
-    "total": 2000
-  },
-  "cost": 0.012
-}
-```
-
----
-
-## 3. Sample n8n Workflow JSON
-
-Import this JSON into n8n to get started. This sample demonstrates a **Research Agent → AgentFlow → Slack Notification** flow.
-
-```json
-{
-  "nodes": [
+1.  Create a new n8n workflow.
+2.  Add a `Webhook` node as the trigger.
+3.  When you first set it up, n8n will provide you with a test URL. The URL you use in the `_callback_url` field will be different, but this setup allows the workflow to receive the data.
+4.  When AgentFlow completes, it will send a `POST` request to your callback URL with the following JSON payload:
+    ```json
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "agentflow-callback",
-        "options": {}
-      },
-      "name": "AgentFlow Callback",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        800,
-        300
-      ],
-      "webhookId": "agentflow-callback"
-    },
-    {
-      "parameters": {
-        "channel": "general",
-        "text": "=AgentFlow execution {{ $json.executionId }} completed!\n\nOutput: {{ $json.output }}",
-        "otherOptions": {}
-      },
-      "name": "Slack Notification",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 1,
-      "position": [
-        1050,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://yourapp.com/v1/workflows/webhooks/YOUR_WORKFLOW_ID/YOUR_SECRET",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-agentflow-signature",
-              "value": "={{ $node[\"Calculate Signature\"].json.signature }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"input\": {{ $json.query }},\n  \"_callback_url\": \"https://your-n8n-instance.com/webhook/agentflow-callback\"\n}",
-        "options": {}
-      },
-      "name": "Trigger AgentFlow",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [
-        550,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "functionCode": "const crypto = require('crypto');\nconst secret = 'YOUR_SECRET';\nconst body = JSON.stringify(items[0].json);\nconst signature = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');\nreturn { signature };"
-      },
-      "name": "Calculate Signature",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        300,
-        300
-      ]
+        "executionId": "...",
+        "workflowId": "...",
+        "status": "COMPLETED",
+        "finalOutput": "This is the final result from the agent workflow."
     }
-  ],
-  "connections": {
-    "Calculate Signature": {
-      "main": [
-        [
-          {
-            "node": "Trigger AgentFlow",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AgentFlow Callback": {
-      "main": [
-        [
-          {
-            "node": "Slack Notification",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  }
-}
-```
+    ```
+5.  You can now use this data in subsequent n8n nodes.
+
+## 3. Securing Your Webhook (Optional but Recommended)
+
+For production use, you should verify the signature of the incoming webhook from AgentFlow to ensure it's authentic.
+
+*AgentFlow does not yet support sending a signature on the callback, but the trigger webhook can be secured.* This section will be updated when callback signatures are available.

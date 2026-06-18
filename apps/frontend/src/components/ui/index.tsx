@@ -28,10 +28,10 @@ export function StatusBadge({ status }: { status: string }) {
 
 // ── Spinner ──────────────────────────────────────────────────────────────────
 
-export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+export function Spinner({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg', className?: string }) {
   const s = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' }[size]
   return (
-    <div className={`${s} border-2 border-[#2e3347] border-t-brand-500 rounded-full animate-spin`} />
+    <div className={`${s} border-2 border-[#2e3347] border-t-brand-500 rounded-full animate-spin ${className}`} />
   )
 }
 
@@ -98,9 +98,9 @@ export function PageHeader({
 
 // ── ErrorBanner ──────────────────────────────────────────────────────────────
 
-export function ErrorBanner({ message }: { message: string }) {
+export function ErrorBanner({ message, className = '' }: { message: string, className?: string }) {
   return (
-    <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg px-4 py-3 text-sm">
+    <div className={`bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg px-4 py-3 text-sm ${className}`}>
       {message}
     </div>
   )

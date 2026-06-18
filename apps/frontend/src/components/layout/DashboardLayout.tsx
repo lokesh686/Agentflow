@@ -4,8 +4,11 @@ import { useAuthStore } from '../../store/authStore'
 const NAV = [
   { to: '/', label: 'Dashboard', icon: '⬡' },
   { to: '/workflows', label: 'Workflows', icon: '◈' },
+  { to: '/templates', label: 'Templates', icon: '📚' },
   { to: '/executions', label: 'Executions', icon: '▷' },
+  { to: '/monitor', label: 'Monitor', icon: '📈' },
   { to: '/billing', label: 'Billing', icon: '💳' },
+  { to: '/team', label: 'Team & API', icon: '⚙' },
 ]
 
 export default function DashboardLayout() {

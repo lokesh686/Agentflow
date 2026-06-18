@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const workflowService = require('../services/workflowService');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { checkPlanLimits } = require('../middleware/planLimits');
 const { verifyWebhookSignature } = require('../middleware/webhookAuth');
 
 const router = express.Router();
@@ -122,7 +123,7 @@ router.get('/:id/versions/:version', requireAuth, async (req, res, next) => {
 });
 
 // POST /v1/workflows/:id/execute — queue execution
-router.post('/:id/execute', requireAuth, requireRole('member'), async (req, res, next) => {
+router.post('/:id/execute', requireAuth, requireRole('member'), checkPlanLimits, async (req, res, next) => {
   try {
     const workflow = await workflowService.getWorkflow({ workflowId: req.params.id, teamId: req.user.teamId });
     if (workflow.status === 'archived') {
@@ -197,6 +198,36 @@ router.post('/webhooks/:id/:secret', verifyWebhookSignature, async (req, res, ne
     });
   } catch (err) {
     next(err);
+  }
+});
+
+const crypto = require('crypto');
+const Webhook = require('../models/Webhook');
+
+router.get('/:id/webhook', protect, async (req, res) => {
+  try {
+    let webhook = await Webhook.findOne({ workflowId: req.params.id, teamId: req.user.teamId });
+    if (!webhook) {
+      webhook = new Webhook({ workflowId: req.params.id, teamId: req.user.teamId });
+      await webhook.save();
+    }
+    res.json(webhook);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/:id/webhook/rotate', protect, async (req, res) => {
+  try {
+    const webhook = await Webhook.findOne({ workflowId: req.params.id, teamId: req.user.teamId });
+    if (!webhook) {
+      return res.status(404).json({ message: 'Webhook not found' });
+    }
+    webhook.secret = crypto.randomBytes(32).toString('hex');
+    await webhook.save();
+    res.json(webhook);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

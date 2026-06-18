@@ -17,7 +17,7 @@ export interface ExecutionStep {
 export interface Execution {
   _id: string
   workflowId: string
-  status: 'QUEUED' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'RETRYING' | 'CANCELLED'
+  status: 'QUEUED' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'RETRYING' | 'CANCELLED' | 'WAITING_FOR_APPROVAL'
   input: Record<string, any>
   steps: ExecutionStep[]
   finalOutput: string | null

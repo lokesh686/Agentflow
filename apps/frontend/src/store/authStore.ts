@@ -19,6 +19,7 @@ interface AuthState {
   isLoading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
+  loginWithTokens: (accessToken: string, refreshToken: string) => void
   register: (name: string, email: string, password: string) => Promise<{ message: string }>
   logout: () => Promise<void>
   clearError: () => void
@@ -50,7 +51,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (name, email, password) => {
+      loginWithTokens: (accessToken, refreshToken) => {
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
+    set({ accessToken, refreshToken })
+    get().hydrate()
+  },
+
+  register: async (name, email, password) => {
         set({ isLoading: true, error: null })
         try {
           const { data } = await api.post('/auth/register', { name, email, password })

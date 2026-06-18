@@ -54,4 +54,19 @@ router.post(
   }
 );
 
+const UsageRecord = require('../models/UsageRecord');
+
+router.get('/usage', protect, async (req, res) => {
+  const period = new Date().toISOString().slice(0, 7); // YYYY-MM
+  try {
+    const usage = await UsageRecord.findOne({ teamId: req.user.teamId, period });
+    res.json({
+      executions: usage ? usage.executions : 0,
+      tokens: usage ? usage.tokens : 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch usage data' });
+  }
+});
+
 module.exports = router;
